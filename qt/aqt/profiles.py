@@ -7,6 +7,7 @@
 # - Saves in sqlite rather than a flat file so the config can't be corrupted
 
 import io
+import os
 import locale
 import pickle
 import random
@@ -14,7 +15,7 @@ import shutil
 import traceback
 from typing import Any, Dict, List, Optional
 
-from send2trash import send2trash
+from send2trash import send2trash, TrashPermissionError
 
 import anki.lang
 import aqt.forms
@@ -280,14 +281,24 @@ details have been forgotten."""
     def remove(self, name) -> None:
         p = self.profileFolder()
         if os.path.exists(p):
-            send2trash(p)
+            try:
+                send2trash(p)
+            except TrashPermissionError:
+                # see note on trashCollection
+                shutil.rmtree(p)
         self.db.execute("delete from profiles where name = ?", name)
         self.db.commit()
 
     def trashCollection(self) -> None:
         p = self.collectionPath()
         if os.path.exists(p):
-            send2trash(p)
+            try:
+                send2trash(p)
+            except TrashPermissionError:
+                # https://forums.ankiweb.net/t/unable-to-move-existing-file-to-trash/1419
+                # when target is on a separate device it may not have permission to create
+                # the trash
+                os.unlink(p)
 
     def rename(self, name) -> None:
         oldName = self.name

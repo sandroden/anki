@@ -8,6 +8,7 @@ import io
 import json
 import os
 import re
+import shutil
 import zipfile
 from collections import defaultdict
 from concurrent.futures import Future
@@ -19,7 +20,7 @@ from zipfile import ZipFile
 import jsonschema
 import markdown
 from jsonschema.exceptions import ValidationError
-from send2trash import send2trash
+from send2trash import send2trash, TrashPermissionError
 
 import anki
 import aqt
@@ -420,6 +421,9 @@ and have been disabled: %(found)s"
     def deleteAddon(self, dir: str) -> bool:
         try:
             send2trash(self.addonsFolder(dir))
+            return True
+        except TrashPermissionError:
+            shutil.rmtree(self.addonsFolder(dir))
             return True
         except OSError as e:
             showWarning(
